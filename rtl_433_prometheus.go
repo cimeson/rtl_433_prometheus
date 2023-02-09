@@ -53,6 +53,7 @@ Matchers:
 
 	addr            = flag.String("listen", ":9550", "Address to listen on")
 	subprocess      = flag.String("subprocess", "rtl_433 -F json", "What command to run to get rtl_433 radio packets")
+	debugMode       = flag.Bool("debug", false, "Enable debug output")
 	channelMatchers = make(locationMatchers)
 	idMatchers      = make(locationMatchers)
 
@@ -63,7 +64,7 @@ Matchers:
 			Name: "rtl_433_power_watts",
 			Help: "Instantaneous power in watts.",
 		},
-		[]string{"model", "id", "channel", "location"},
+		labels,
 	)
 	packetsReceived = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
@@ -100,6 +101,13 @@ Matchers:
 		},
 		labels,
 	)
+	depth = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "rtl_433_depth_cm",
+			Help: "Depth of gap in Centimeters",
+		},
+		labels,
+	)
 )
 
 // Message is a single sensor observation: a single line of JSON input from $ rtl_433 -F json
@@ -132,6 +140,8 @@ type Message struct {
 	Power1W *int32 `json:"power1_W"`
 	// Power on channel 0 (Watts)
 	Power2W *int32 `json:"power2_W"`
+	// Depth of gap in Centimeters
+	DepthCM *int `json:"depth_cm"`
 }
 
 type locationMatcher struct {
@@ -224,6 +234,11 @@ func run(r io.Reader) error {
 			continue
 		}
 
+		if *debugMode {
+			log.Printf("Got line %q", line)
+			log.Printf("Processing message %v", msg)
+		}
+
 		location := idMatchers[locationMatcher{Model: msg.Model, Matcher: id}]
 		if location == "" {
 			location = channelMatchers[locationMatcher{Model: msg.Model, Matcher: channel}]
@@ -263,6 +278,9 @@ func run(r io.Reader) error {
 		if p := msg.Power2W; p != nil {
 			watts.WithLabelValues(msg.Model, id, "2", location).Set(float64(*p))
 		}
+		if d := msg.DepthCM; d != nil {
+			depth.WithLabelValues(labels...).Set(float64(*d))
+		}
 	}
 	return scanner.Err()
 }
@@ -273,7 +291,7 @@ func main() {
 	flag.Parse()
 	log.Print("channelMatchers: " + channelMatchers.String())
 	log.Print("idMatchers: " + idMatchers.String())
-	prometheus.MustRegister(packetsReceived, temperature, humidity, timestamp, battery, watts)
+	prometheus.MustRegister(packetsReceived, temperature, humidity, timestamp, battery, watts, depth)
 	// Add Go module build info.
 	prometheus.MustRegister(prometheus.NewBuildInfoCollector())
 
