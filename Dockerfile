@@ -3,7 +3,7 @@
 # Use the official Golang image to create a build artifact.
 # This is based on Debian and sets the GOPATH to /go.
 # https://hub.docker.com/_/golang
-FROM golang:1.14 as gobuilder
+FROM docker.io/golang:1.20 as gobuilder
 
 # Create and change to the app directory.
 WORKDIR /app
@@ -20,10 +20,10 @@ COPY . ./
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=arm GOARM=6 go build -mod=readonly -a -v rtl_433_prometheus.go
 
 FROM gcr.io/rtl433/rtl_433:latest as rtl_433
-FROM balenalib/raspberrypi3:run
+FROM docker.io/balenalib/raspberrypi3:run
 
 # https://www.balena.io/docs/reference/base-images/base-images/#building-arm-containers-on-x86-machines
-RUN [ "cross-build-start" ]
+# RUN [ "cross-build-start" ]
 
 RUN apt-get update && apt-get install -y librtlsdr0
 
@@ -33,7 +33,7 @@ COPY --from=rtl_433 /usr/local/bin/rtl_433 /
 RUN chmod +x /rtl_433
 
 # https://www.balena.io/docs/reference/base-images/base-images/#building-arm-containers-on-x86-machines
-RUN [ "cross-build-end" ]
+# RUN [ "cross-build-end" ]
 
 EXPOSE 9550
 ENTRYPOINT ["/rtl_433_prometheus"]
