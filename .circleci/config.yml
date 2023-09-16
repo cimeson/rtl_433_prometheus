@@ -10,7 +10,6 @@ jobs:
     resource_class: small
     steps:
       - checkout
-      - setup_remote_docker
       - docker/check:
           docker-password: DOCKER_PASSWORD
           docker-username: DOCKER_USERNAME
