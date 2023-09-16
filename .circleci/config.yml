@@ -23,7 +23,7 @@ jobs:
   build_arm64:
     docker:
       - image: cimg/base:stable
-    resource_class: arm.small
+    resource_class: arm.medium
     steps:
       - checkout
       - setup_remote_docker
