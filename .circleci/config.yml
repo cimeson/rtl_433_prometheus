@@ -17,14 +17,13 @@ jobs:
       - docker/build:
           image: $DOCKER_USERNAME/$CIRCLE_PROJECT_REPONAME
           tag: amd64-$CIRCLE_SHA1
-          use-buildkit: true
       - docker/push:
           image: $DOCKER_USERNAME/$CIRCLE_PROJECT_REPONAME
           tag: amd64-$CIRCLE_SHA1
   build_arm64:
     docker:
       - image: cimg/base:stable
-    resource_class: small
+    resource_class: arm.small
     steps:
       - checkout
       - setup_remote_docker
@@ -34,7 +33,6 @@ jobs:
       - docker/build:
           image: $DOCKER_USERNAME/$CIRCLE_PROJECT_REPONAME
           tag: arm64-$CIRCLE_SHA1
-          use-buildkit: true
       - docker/push:
           image: $DOCKER_USERNAME/$CIRCLE_PROJECT_REPONAME
           tag: arm64-$CIRCLE_SHA1
