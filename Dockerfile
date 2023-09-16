@@ -25,9 +25,7 @@ RUN apt-get update && apt-get install -y librtlsdr0
 
 WORKDIR /
 COPY --from=gobuilder /app/rtl_433_prometheus /
-COPY --from=rtl_433 /usr/local/bin/rtl_433 /
-RUN chmod +x /rtl_433
 
 EXPOSE 9550
 ENTRYPOINT ["/rtl_433_prometheus"]
-CMD ["--subprocess", "/rtl_433 -F json -M newmodel"]
+CMD ["--subprocess", "rtl_433 -F json -M newmodel"]
