@@ -21,8 +21,8 @@ jobs:
           image: $DOCKER_USERNAME/$CIRCLE_PROJECT_REPONAME
           tag: amd64-$CIRCLE_SHA1
   build_arm64:
-    docker:
-      - image: cimg/base:stable
+    machine:
+      - image: ubuntu-2204:current
     resource_class: arm.medium
     steps:
       - checkout
