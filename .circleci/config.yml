@@ -11,7 +11,9 @@ jobs:
     steps:
       - checkout
       - setup_remote_docker
-      - docker/check
+      - docker/check:
+          docker-password: $DOCKER_PASSWORD
+          docker-username: $DOCKER_USERNAME
       - docker/build:
           image: $DOCKER_USERNAME/$CIRCLE_PROJECT_REPONAME
           tag: amd64-$CIRCLE_SHA1
