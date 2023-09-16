@@ -51,6 +51,20 @@ jobs:
               --amend "$DOCKER_USERNAME/$CIRCLE_PROJECT_REPONAME:amd64-$CIRCLE_SHA1" \
               --amend "$DOCKER_USERNAME/$CIRCLE_PROJECT_REPONAME:arm64-$CIRCLE_SHA1"
             docker manifest push "$DOCKER_USERNAME/$CIRCLE_PROJECT_REPONAME:$CIRCLE_SHA1"
+  clean_build_tags:
+    docker:
+      - image: cimg/base:stable
+    resource_class: small
+    steps:
+      - run:
+          name: cleanup build arch tags
+          command: |
+            auth_response=$(echo "username=$DOCKER_USERNAME&password=$DOCKER_PASSWORD" | curl --data @- --fail --url "https://hub.docker.com/v2/users/login")
+            DOCKER_TOKEN=$(echo $auth_response | jq -r .token)
+            DOCKER_TAG=amd64-$CIRCLE_SHA1
+            curl --fail --header "Authorization: Bearer $DOCKER_TOKEN" --request DELETE --url "https://hub.docker.com/v2/namespaces/$DOCKER_USERNAME/repositories/$CIRCLE_PROJECT_REPONAME/tags/$DOCKER_TAG"
+            DOCKER_TAG=arm64-$CIRCLE_SHA1
+            curl --fail --header "Authorization: Bearer $DOCKER_TOKEN" --request DELETE --url "https://hub.docker.com/v2/namespaces/$DOCKER_USERNAME/repositories/$CIRCLE_PROJECT_REPONAME/tags/$DOCKER_TAG"
 
 workflows:
   build-and-push:
@@ -65,5 +79,10 @@ workflows:
           requires:
             - build_amd64
             - build_arm64
+          context:
+            - docker
+      - clean_build_tags:
+          requires:
+            - create_manifest
           context:
             - docker
