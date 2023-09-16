@@ -21,10 +21,30 @@ jobs:
       - docker/push:
           image: $DOCKER_USERNAME/$CIRCLE_PROJECT_REPONAME
           tag: amd64-$CIRCLE_SHA1
+  build_arm64:
+    docker:
+      - image: cimg/base:stable
+    resource_class: small
+    steps:
+      - checkout
+      - setup_remote_docker
+      - docker/check:
+          docker-password: DOCKER_PASSWORD
+          docker-username: DOCKER_USERNAME
+      - docker/build:
+          image: $DOCKER_USERNAME/$CIRCLE_PROJECT_REPONAME
+          tag: arm64-$CIRCLE_SHA1
+          use-buildkit: true
+      - docker/push:
+          image: $DOCKER_USERNAME/$CIRCLE_PROJECT_REPONAME
+          tag: arm64-$CIRCLE_SHA1
 
 workflows:
   build-and-push:
     jobs:
       - build_amd64:
+          context:
+            - docker
+      - build_arm64:
           context:
             - docker
