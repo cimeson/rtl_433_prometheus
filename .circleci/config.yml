@@ -35,6 +35,22 @@ jobs:
       - docker/push:
           image: $DOCKER_USERNAME/$CIRCLE_PROJECT_REPONAME
           tag: arm64-$CIRCLE_SHA1
+  create_manifest:
+    docker:
+      - image: cimg/base:stable
+    resource_class: small
+    steps:
+      - setup_remote_docker
+      - docker/check:
+          docker-password: DOCKER_PASSWORD
+          docker-username: DOCKER_USERNAME
+      - run:
+          name: create and push manifest
+          command: |
+            docker manifest create "$DOCKER_USERNAME/$CIRCLE_PROJECT_REPONAME:$CIRCLE_SHA1" \
+              --amend "$DOCKER_USERNAME/$CIRCLE_PROJECT_REPONAME:amd64-$CIRCLE_SHA1" \
+              --amend "$DOCKER_USERNAME/$CIRCLE_PROJECT_REPONAME:arm64-$CIRCLE_SHA1"
+            docker manifest push "$DOCKER_USERNAME/$CIRCLE_PROJECT_REPONAME:$CIRCLE_SHA1"
 
 workflows:
   build-and-push:
@@ -43,5 +59,11 @@ workflows:
           context:
             - docker
       - build_arm64:
+          context:
+            - docker
+      - create_manifest:
+          requires:
+            - build_amd64
+            - build_arm64
           context:
             - docker
