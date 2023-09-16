@@ -22,7 +22,7 @@ jobs:
           tag: amd64-$CIRCLE_SHA1
   build_arm64:
     machine:
-      - image: ubuntu-2204:current
+      image: ubuntu-2204:current
     resource_class: arm.medium
     steps:
       - checkout
