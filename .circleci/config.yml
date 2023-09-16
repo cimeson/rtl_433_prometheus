@@ -1,29 +1,27 @@
 version: 2.1
 
+orbs:
+  docker: circleci/docker@2.2.0
+
 jobs:
-  build-and-push:
+  build_amd64:
     docker:
       - image: cimg/base:stable
-    resource_class: arm.medium
+    resource_class: small
     steps:
-      - setup_remote_docker
       - checkout
-      - run:
-          command: docker run --rm --privileged multiarch/qemu-user-static --reset -p yes 
-          name: Setup multiarch qemu
-      - run:
-          command: docker buildx create --name multiarch --use
-          name: Setup multiarch buildx
-      - run:
-          command: echo $DOCKER_PASSWORD | docker login --username $DOCKER_USERNAME --password-stdin
-          name: Authenticate with Docker repo
-      - run:
-          command: docker buildx build --push --platform linux/arm64,linux/amd64 -t $DOCKER_USERNAME/$CIRCLE_PROJECT_REPONAME:latest .
-          name: Build and push multiarch Docker image
+      - setup_remote_docker
+      - docker/check
+      - docker/build:
+          image: $DOCKER_USERNAME/$CIRCLE_PROJECT_REPONAME
+          tag: amd64-$CIRCLE_SHA1
+      - docker/push:
+          image: $DOCKER_USERNAME/$CIRCLE_PROJECT_REPONAME
+          tag: amd64-$CIRCLE_SHA1
 
 workflows:
   build-and-push:
     jobs:
-      - build-and-push:
+      - build_amd64:
           context:
             - docker
