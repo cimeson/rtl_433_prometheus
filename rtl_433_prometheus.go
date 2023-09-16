@@ -312,7 +312,7 @@ func main() {
 		}
 	}()
 
-	cmd := exec.Command("/bin/bash", "-c", *subprocess)
+	cmd := exec.Command("/bin/sh", "-c", *subprocess)
 	// If we don't tell the subprocess stderr to be our stderr, we get no logs on failure.
 	cmd.Stderr = os.Stderr
 	stdout, err := cmd.StdoutPipe()

@@ -1,0 +1,92 @@
+version: 2.1
+
+orbs:
+  docker: circleci/docker@2.2.0
+
+jobs:
+  build_amd64:
+    docker:
+      - image: cimg/base:stable
+    resource_class: small
+    steps:
+      - checkout
+      - setup_remote_docker
+      - docker/check:
+          docker-password: DOCKER_PASSWORD
+          docker-username: DOCKER_USERNAME
+      - docker/build:
+          image: $DOCKER_USERNAME/$CIRCLE_PROJECT_REPONAME
+          tag: amd64-$CIRCLE_SHA1
+      - docker/push:
+          image: $DOCKER_USERNAME/$CIRCLE_PROJECT_REPONAME
+          tag: amd64-$CIRCLE_SHA1
+  build_arm64:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: arm.medium
+    steps:
+      - checkout
+      - docker/check:
+          docker-password: DOCKER_PASSWORD
+          docker-username: DOCKER_USERNAME
+      - docker/build:
+          image: $DOCKER_USERNAME/$CIRCLE_PROJECT_REPONAME
+          tag: arm64-$CIRCLE_SHA1
+      - docker/push:
+          image: $DOCKER_USERNAME/$CIRCLE_PROJECT_REPONAME
+          tag: arm64-$CIRCLE_SHA1
+  create_manifest:
+    docker:
+      - image: cimg/base:stable
+    resource_class: small
+    steps:
+      - setup_remote_docker
+      - docker/check:
+          docker-password: DOCKER_PASSWORD
+          docker-username: DOCKER_USERNAME
+      - run:
+          name: create and push manifest
+          command: |
+            docker manifest create "$DOCKER_USERNAME/$CIRCLE_PROJECT_REPONAME:$CIRCLE_SHA1" \
+              --amend "$DOCKER_USERNAME/$CIRCLE_PROJECT_REPONAME:amd64-$CIRCLE_SHA1" \
+              --amend "$DOCKER_USERNAME/$CIRCLE_PROJECT_REPONAME:arm64-$CIRCLE_SHA1"
+            docker manifest push "$DOCKER_USERNAME/$CIRCLE_PROJECT_REPONAME:$CIRCLE_SHA1"
+            docker manifest create "$DOCKER_USERNAME/$CIRCLE_PROJECT_REPONAME:latest" \
+              --amend "$DOCKER_USERNAME/$CIRCLE_PROJECT_REPONAME:amd64-$CIRCLE_SHA1" \
+              --amend "$DOCKER_USERNAME/$CIRCLE_PROJECT_REPONAME:arm64-$CIRCLE_SHA1"
+            docker manifest push "$DOCKER_USERNAME/$CIRCLE_PROJECT_REPONAME:latest"
+  clean_build_tags:
+    docker:
+      - image: cimg/base:stable
+    resource_class: small
+    steps:
+      - run:
+          name: cleanup build arch tags
+          command: |
+            auth_response=$(echo "username=$DOCKER_USERNAME&password=$DOCKER_PASSWORD" | curl --data @- --fail --url "https://hub.docker.com/v2/users/login")
+            DOCKER_TOKEN=$(echo $auth_response | jq -r .token)
+            DOCKER_TAG=amd64-$CIRCLE_SHA1
+            curl --fail --header "Authorization: Bearer $DOCKER_TOKEN" --request DELETE --url "https://hub.docker.com/v2/namespaces/$DOCKER_USERNAME/repositories/$CIRCLE_PROJECT_REPONAME/tags/$DOCKER_TAG"
+            DOCKER_TAG=arm64-$CIRCLE_SHA1
+            curl --fail --header "Authorization: Bearer $DOCKER_TOKEN" --request DELETE --url "https://hub.docker.com/v2/namespaces/$DOCKER_USERNAME/repositories/$CIRCLE_PROJECT_REPONAME/tags/$DOCKER_TAG"
+
+workflows:
+  build-and-push:
+    jobs:
+      - build_amd64:
+          context:
+            - docker
+      - build_arm64:
+          context:
+            - docker
+      - create_manifest:
+          requires:
+            - build_amd64
+            - build_arm64
+          context:
+            - docker
+      - clean_build_tags:
+          requires:
+            - create_manifest
+          context:
+            - docker
